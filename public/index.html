@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aria — AI English Tutor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface-hover: #222240;
+      --accent: #7c5cfc;
+      --accent-glow: #7c5cfc66;
+      --green: #34d399;
+      --orange: #fb923c;
+      --red: #f87171;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .ambient {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .ambient-1 { background: #7c5cfc; top: -200px; left: -100px; }
+    .ambient-2 { background: #06b6d4; bottom: -200px; right: -100px; }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid #ffffff0a;
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+
+    /* --- Status --- */
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #475569;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .status-dot.live {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    .status-dot.speaking {
+      background: var(--orange);
+      box-shadow: 0 0 10px var(--orange);
+      animation: pulse 0.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-text {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* --- Visualizer --- */
+    .visualizer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: 80px;
+      background: #ffffff06;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .vis-bar {
+      width: 4px;
+      border-radius: 4px;
+      background: var(--accent);
+      height: 6px;
+      transition: height 0.08s ease;
+      opacity: 0.7;
+    }
+    .vis-bar.active { opacity: 1; }
+
+    /* --- Button --- */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #6a4ae0; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled {
+      background: #374151;
+      color: #6b7280;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-danger {
+      background: #991b1b;
+      color: #fca5a5;
+      display: none;
+    }
+    .btn-danger:hover { background: #7f1d1d; transform: translateY(-1px); }
+    .btn-danger:active { transform: translateY(0); }
+
+    /* --- Log --- */
+    .log-card {
+      background: var(--surface);
+      border: 1px solid #ffffff0a;
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .log-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .log-scroll {
+      max-height: 180px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #334155 transparent;
+    }
+    .log-scroll::-webkit-scrollbar { width: 4px; }
+    .log-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .log-entry {
+      font-size: 0.8rem;
+      line-height: 1.7;
+      padding: 2px 0;
+      color: var(--text-muted);
+    }
+    .log-entry.ok   { color: var(--green); }
+    .log-entry.err  { color: var(--red); }
+    .log-entry.warn { color: var(--orange); }
+
+    .tip {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 16px; }
+      .card, .log-card { padding: 20px; }
+      header h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="container">
+  <header>
+    <h1>Aria — AI English Tutor</h1>
+    <p>Powered by Gemini 2.5 Native Audio</p>
+  </header>
+
+  <div class="card">
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">Ready to connect</span>
+    </div>
+
+    <div class="visualizer" id="visualizer"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="startBtn">Start Session</button>
+      <button class="btn btn-danger" id="stopBtn">Stop</button>
+    </div>
+  </div>
+
+  <div class="log-card">
+    <div class="log-title">Session Log</div>
+    <div class="log-scroll" id="log">
+      <div class="log-entry">Press Start Session, allow your microphone, and start speaking.</div>
+    </div>
+  </div>
+
+  <p class="tip">Use headphones to prevent echo feedback</p>
+</div>
+
+<script>
+const MIC_SAMPLE_RATE = 16000;
+const PLAYBACK_SAMPLE_RATE = 24000;
+const NUM_BARS = 40;
+
+let ws, mediaStream, audioCtx, micSource, processor, analyser, animId;
+let playCtx, playQueue = [], playing = false;
+
+// --- Visualizer setup ---
+const visEl = document.getElementById("visualizer");
+const bars = Array.from({ length: NUM_BARS }, () => {
+  const b = document.createElement("div");
+  b.className = "vis-bar";
+  visEl.appendChild(b);
+  return b;
+});
+
+function animateVis() {
+  if (!analyser) {
+    bars.forEach(b => { b.style.height = "6px"; b.classList.remove("active"); });
+    return;
+  }
+  const freq = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freq);
+  const step = freq.length / NUM_BARS;
+  bars.forEach((b, i) => {
+    const val = freq[Math.floor(i * step)] / 255;
+    const h = 6 + val * 60;
+    b.style.height = h + "px";
+    b.classList.toggle("active", val > 0.15);
+  });
+  animId = requestAnimationFrame(animateVis);
+}
+
+// --- Log ---
+const logEl = document.getElementById("log");
+function log(msg, cls = "") {
+  const d = document.createElement("div");
+  d.className = "log-entry" + (cls ? ` ${cls}` : "");
+  d.textContent = msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(text, state) {
+  document.getElementById("statusText").textContent = text;
+  const dot = document.getElementById("statusDot");
+  dot.className = "status-dot" + (state ? ` ${state}` : "");
+}
+
+// --- PCM conversion ---
+function float32ToInt16(f32) {
+  const out = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    out[i] = Math.max(-32768, Math.min(32767, f32[i] * 32768));
+  }
+  return out;
+}
+
+// --- Audio playback queue ---
+function enqueueAudio(int16Buf) {
+  const f32 = new Float32Array(int16Buf.length);
+  for (let i = 0; i < int16Buf.length; i++) f32[i] = int16Buf[i] / 32768;
+  playQueue.push(f32);
+  if (!playing) drainQueue();
+}
+
+function drainQueue() {
+  if (!playQueue.length) { playing = false; return; }
+  playing = true;
+  if (!playCtx || playCtx.state === "closed") {
+    playCtx = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+  }
+  const samples = playQueue.shift();
+  const buf = playCtx.createBuffer(1, samples.length, PLAYBACK_SAMPLE_RATE);
+  buf.copyToChannel(samples, 0);
+  const src = playCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(playCtx.destination);
+  src.onended = drainQueue;
+  src.start();
+}
+
+// --- Start session ---
+document.getElementById("startBtn").addEventListener("click", async () => {
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  startBtn.disabled = true;
+  setStatus("Requesting microphone...", "");
+  log("Requesting microphone access...");
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { sampleRate: MIC_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    });
+  } catch (e) {
+    log("Microphone denied: " + e.message, "err");
+    setStatus("Microphone denied", "");
+    startBtn.disabled = false;
+    return;
+  }
+
+  audioCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
+  micSource = audioCtx.createMediaStreamSource(mediaStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 128;
+  micSource.connect(analyser);
+  animateVis();
+
+  const wsUrl = `ws://${location.host}`;
+  ws = new WebSocket(wsUrl);
+  ws.binaryType = "arraybuffer";
+
+  ws.onopen = () => {
+    setStatus("Connected — speak now!", "live");
+    log("Connected to Aria. Say hello!", "ok");
+    startBtn.style.display = "none";
+    stopBtn.style.display = "flex";
+
+    processor = audioCtx.createScriptProcessor(4096, 1, 1);
+    processor.onaudioprocess = (e) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const pcm = float32ToInt16(e.inputBuffer.getChannelData(0));
+        ws.send(pcm.buffer);
+      }
+    };
+    micSource.connect(processor);
+    processor.connect(audioCtx.destination);
+  };
+
+  ws.onmessage = (e) => {
+    setStatus("Aria is speaking...", "speaking");
+    enqueueAudio(new Int16Array(e.data));
+    clearTimeout(ws._statusTimer);
+    ws._statusTimer = setTimeout(() => {
+      if (ws?.readyState === WebSocket.OPEN) setStatus("Connected — speak now!", "live");
+    }, 1500);
+  };
+
+  ws.onerror = () => log("Connection error", "err");
+
+  ws.onclose = () => {
+    setStatus("Disconnected", "");
+    log("Session ended.");
+    cleanup();
+  };
+});
+
+// --- Stop session ---
+document.getElementById("stopBtn").addEventListener("click", () => {
+  ws?.close();
+  cleanup();
+  document.getElementById("startBtn").style.display = "flex";
+  document.getElementById("startBtn").disabled = false;
+  document.getElementById("stopBtn").style.display = "none";
+  setStatus("Ready to connect", "");
+  log("Session stopped.");
+});
+
+function cleanup() {
+  cancelAnimationFrame(animId);
+  analyser = null;
+  bars.forEach(b => { b.style.height = "6px"; b.classList.remove("active"); });
+  processor?.disconnect();
+  micSource?.disconnect();
+  mediaStream?.getTracks().forEach(t => t.stop());
+  audioCtx?.close();
+  playCtx?.close();
+  audioCtx = micSource = processor = mediaStream = ws = playCtx = null;
+  playQueue = [];
+  playing = false;
+}
+</script>
+</body>
+</html>
