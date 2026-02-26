@@ -212,10 +212,132 @@
       margin-top: 20px;
     }
 
+    /* --- Mode Selection --- */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .mode-card {
+      background: var(--surface);
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .mode-card:hover {
+      border-color: var(--accent);
+      background: var(--surface-hover);
+      transform: translateY(-2px);
+    }
+    .mode-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .mode-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .mode-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* --- Word Display --- */
+    .word-view { display: none; }
+    .word-display {
+      text-align: center;
+      padding: 32px 20px;
+    }
+    .word-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .word-value {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--accent), #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .word-category {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .word-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-ghost {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ffffff1a;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: #ffffff08;
+    }
+    .btn-back {
+      flex: 0 0 auto;
+      padding: 12px 16px;
+      border: 1px solid #ffffff1a;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-back:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .word-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #7c5cfc1a;
+      border: 1px solid #7c5cfc33;
+      border-radius: 10px;
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+    .word-badge .badge-word {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .hidden { display: none !important; }
+
     @media (max-width: 520px) {
       body { padding: 16px; }
       .card, .log-card { padding: 20px; }
       header h1 { font-size: 1.4rem; }
+      .word-value { font-size: 1.8rem; }
+      .mode-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -230,24 +352,60 @@
     <p>Powered by Gemini 2.5 Native Audio</p>
   </header>
 
-  <div class="card">
-    <div class="status">
-      <div class="status-dot" id="statusDot"></div>
-      <span class="status-text" id="statusText">Ready to connect</span>
-    </div>
-
-    <div class="visualizer" id="visualizer"></div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="startBtn">Start Session</button>
-      <button class="btn btn-danger" id="stopBtn">Stop</button>
+  <!-- Mode Selection View -->
+  <div id="modeView">
+    <div class="mode-grid">
+      <div class="mode-card" id="modeFreeTalk">
+        <div class="mode-icon">💬</div>
+        <div class="mode-label">Free Talk</div>
+        <div class="mode-desc">Practice natural conversation on any topic</div>
+      </div>
+      <div class="mode-card" id="modeWordPitch">
+        <div class="mode-icon">🎯</div>
+        <div class="mode-label">Word Pitch</div>
+        <div class="mode-desc">Describe a random word &amp; build vocabulary</div>
+      </div>
     </div>
   </div>
 
-  <div class="log-card">
-    <div class="log-title">Session Log</div>
-    <div class="log-scroll" id="log">
-      <div class="log-entry">Press Start Session, allow your microphone, and start speaking.</div>
+  <!-- Word Pitch Preview -->
+  <div id="wordView" class="word-view">
+    <div class="card word-display">
+      <div class="word-label">Your word</div>
+      <div class="word-value" id="wordValue"></div>
+      <div class="word-category" id="wordCategory"></div>
+      <div class="word-actions">
+        <button class="btn-back" id="backBtn">← Back</button>
+        <button class="btn-ghost" id="newWordBtn">New Word</button>
+        <button class="btn btn-primary" id="startWordBtn" style="flex:1">Start Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session View -->
+  <div id="sessionView" class="hidden">
+    <div class="card">
+      <div class="word-badge" id="wordBadge">
+        <span>Word:</span>
+        <span class="badge-word" id="badgeWord"></span>
+      </div>
+      <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">Ready to connect</span>
+      </div>
+
+      <div class="visualizer" id="visualizer"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-danger" id="stopBtn" style="display:flex">Stop</button>
+      </div>
+    </div>
+
+    <div class="log-card">
+      <div class="log-title">Session Log</div>
+      <div class="log-scroll" id="log">
+        <div class="log-entry">Connecting to Aria...</div>
+      </div>
     </div>
   </div>
 
@@ -261,15 +419,142 @@ const NUM_BARS = 40;
 
 let ws, mediaStream, audioCtx, micSource, processor, analyser, animId;
 let playCtx, playQueue = [], playing = false;
+let currentMode = "free_talk";
+let currentWord = null;
+
+const WORD_BANK = [
+  { word: "umbrella",       cat: "Object" },
+  { word: "mirror",         cat: "Object" },
+  { word: "candle",         cat: "Object" },
+  { word: "backpack",       cat: "Object" },
+  { word: "scissors",       cat: "Object" },
+  { word: "calendar",       cat: "Object" },
+  { word: "telescope",      cat: "Object" },
+  { word: "compass",        cat: "Object" },
+  { word: "chocolate",      cat: "Food" },
+  { word: "avocado",        cat: "Food" },
+  { word: "cinnamon",       cat: "Food" },
+  { word: "pancake",        cat: "Food" },
+  { word: "sushi",          cat: "Food" },
+  { word: "lemonade",       cat: "Food" },
+  { word: "volcano",        cat: "Nature" },
+  { word: "rainbow",        cat: "Nature" },
+  { word: "waterfall",      cat: "Nature" },
+  { word: "thunderstorm",   cat: "Nature" },
+  { word: "glacier",        cat: "Nature" },
+  { word: "desert",         cat: "Nature" },
+  { word: "horizon",        cat: "Nature" },
+  { word: "nostalgia",      cat: "Feeling" },
+  { word: "courage",        cat: "Feeling" },
+  { word: "jealousy",       cat: "Feeling" },
+  { word: "excitement",     cat: "Feeling" },
+  { word: "loneliness",     cat: "Feeling" },
+  { word: "gratitude",      cat: "Feeling" },
+  { word: "curiosity",      cat: "Feeling" },
+  { word: "freedom",        cat: "Concept" },
+  { word: "tradition",      cat: "Concept" },
+  { word: "innovation",     cat: "Concept" },
+  { word: "democracy",      cat: "Concept" },
+  { word: "privacy",        cat: "Concept" },
+  { word: "ambition",       cat: "Concept" },
+  { word: "justice",        cat: "Concept" },
+  { word: "negotiate",      cat: "Action" },
+  { word: "celebrate",      cat: "Action" },
+  { word: "apologize",      cat: "Action" },
+  { word: "explore",        cat: "Action" },
+  { word: "improvise",      cat: "Action" },
+  { word: "procrastinate",  cat: "Action" },
+  { word: "volunteer",      cat: "Action" },
+  { word: "airport",        cat: "Place" },
+  { word: "library",        cat: "Place" },
+  { word: "hospital",       cat: "Place" },
+  { word: "museum",         cat: "Place" },
+  { word: "restaurant",     cat: "Place" },
+  { word: "lighthouse",     cat: "Place" },
+  { word: "stadium",        cat: "Place" },
+  { word: "architect",      cat: "Profession" },
+  { word: "journalist",     cat: "Profession" },
+  { word: "astronaut",      cat: "Profession" },
+  { word: "detective",      cat: "Profession" },
+  { word: "surgeon",        cat: "Profession" },
+  { word: "diplomat",       cat: "Profession" },
+  { word: "firefighter",    cat: "Profession" },
+  { word: "algorithm",      cat: "Technology" },
+  { word: "satellite",      cat: "Technology" },
+  { word: "robot",          cat: "Technology" },
+  { word: "hologram",       cat: "Technology" },
+  { word: "encryption",     cat: "Technology" },
+  { word: "adventure",      cat: "Misc" },
+  { word: "recycling",      cat: "Misc" },
+  { word: "marathon",       cat: "Misc" },
+  { word: "photography",    cat: "Misc" },
+  { word: "meditation",     cat: "Misc" },
+  { word: "vacation",       cat: "Misc" },
+  { word: "competition",    cat: "Misc" },
+  { word: "nightmare",      cat: "Misc" },
+  { word: "deadline",       cat: "Misc" },
+  { word: "souvenir",       cat: "Misc" },
+];
+
+function pickRandomWord() {
+  return WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+}
+
+// --- Views ---
+const modeView    = document.getElementById("modeView");
+const wordView    = document.getElementById("wordView");
+const sessionView = document.getElementById("sessionView");
+
+function showView(view) {
+  modeView.classList.toggle("hidden", view !== "mode");
+  wordView.style.display = view === "word" ? "block" : "none";
+  sessionView.classList.toggle("hidden", view !== "session");
+}
+
+// --- Mode selection ---
+document.getElementById("modeFreeTalk").addEventListener("click", () => {
+  currentMode = "free_talk";
+  currentWord = null;
+  startSession();
+});
+
+document.getElementById("modeWordPitch").addEventListener("click", () => {
+  currentMode = "word_pitch";
+  showNewWord();
+  showView("word");
+});
+
+function showNewWord() {
+  const entry = pickRandomWord();
+  currentWord = entry;
+  document.getElementById("wordValue").textContent = entry.word;
+  document.getElementById("wordCategory").textContent = entry.cat;
+}
+
+document.getElementById("newWordBtn").addEventListener("click", showNewWord);
+
+document.getElementById("backBtn").addEventListener("click", () => {
+  currentMode = "free_talk";
+  currentWord = null;
+  showView("mode");
+});
+
+document.getElementById("startWordBtn").addEventListener("click", () => {
+  startSession();
+});
 
 // --- Visualizer setup ---
-const visEl = document.getElementById("visualizer");
-const bars = Array.from({ length: NUM_BARS }, () => {
-  const b = document.createElement("div");
-  b.className = "vis-bar";
-  visEl.appendChild(b);
-  return b;
-});
+let bars = [];
+function initVisualizer() {
+  const visEl = document.getElementById("visualizer");
+  visEl.innerHTML = "";
+  bars = Array.from({ length: NUM_BARS }, () => {
+    const b = document.createElement("div");
+    b.className = "vis-bar";
+    visEl.appendChild(b);
+    return b;
+  });
+}
 
 function animateVis() {
   if (!analyser) {
@@ -289,8 +574,8 @@ function animateVis() {
 }
 
 // --- Log ---
-const logEl = document.getElementById("log");
 function log(msg, cls = "") {
+  const logEl = document.getElementById("log");
   const d = document.createElement("div");
   d.className = "log-entry" + (cls ? ` ${cls}` : "");
   d.textContent = msg;
@@ -338,10 +623,20 @@ function drainQueue() {
 }
 
 // --- Start session ---
-document.getElementById("startBtn").addEventListener("click", async () => {
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  startBtn.disabled = true;
+async function startSession() {
+  showView("session");
+  initVisualizer();
+
+  if (currentMode === "word_pitch" && currentWord) {
+    const badge = document.getElementById("wordBadge");
+    badge.style.display = "flex";
+    document.getElementById("badgeWord").textContent = currentWord.word;
+    log(`Word Pitch mode — your word is: ${currentWord.word}`, "warn");
+  } else {
+    document.getElementById("wordBadge").style.display = "none";
+    log("Free Talk mode — say anything!", "ok");
+  }
+
   setStatus("Requesting microphone...", "");
   log("Requesting microphone access...");
 
@@ -352,7 +647,7 @@ document.getElementById("startBtn").addEventListener("click", async () => {
   } catch (e) {
     log("Microphone denied: " + e.message, "err");
     setStatus("Microphone denied", "");
-    startBtn.disabled = false;
+    returnToMenu();
     return;
   }
 
@@ -363,15 +658,16 @@ document.getElementById("startBtn").addEventListener("click", async () => {
   micSource.connect(analyser);
   animateVis();
 
-  const wsUrl = `ws://${location.host}`;
+  let wsUrl = `ws://${location.host}?mode=${currentMode}`;
+  if (currentMode === "word_pitch" && currentWord) {
+    wsUrl += `&word=${encodeURIComponent(currentWord.word)}`;
+  }
   ws = new WebSocket(wsUrl);
   ws.binaryType = "arraybuffer";
 
   ws.onopen = () => {
     setStatus("Connected — speak now!", "live");
-    log("Connected to Aria. Say hello!", "ok");
-    startBtn.style.display = "none";
-    stopBtn.style.display = "flex";
+    log("Connected to Aria. Go ahead and speak!", "ok");
 
     processor = audioCtx.createScriptProcessor(4096, 1, 1);
     processor.onaudioprocess = (e) => {
@@ -400,18 +696,20 @@ document.getElementById("startBtn").addEventListener("click", async () => {
     log("Session ended.");
     cleanup();
   };
-});
+}
 
 // --- Stop session ---
 document.getElementById("stopBtn").addEventListener("click", () => {
   ws?.close();
   cleanup();
-  document.getElementById("startBtn").style.display = "flex";
-  document.getElementById("startBtn").disabled = false;
-  document.getElementById("stopBtn").style.display = "none";
-  setStatus("Ready to connect", "");
+  returnToMenu();
   log("Session stopped.");
 });
+
+function returnToMenu() {
+  showView("mode");
+  setStatus("Ready to connect", "");
+}
 
 function cleanup() {
   cancelAnimationFrame(animId);
