@@ -62,10 +62,13 @@ wss.on("connection", async (clientWs, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const mode = url.searchParams.get("mode") || "free_talk";
   const word = url.searchParams.get("word") || "";
+  const VALID_VOICES = ["Puck", "Charon", "Fenrir", "Aoede", "Kore"];
+  const voiceParam = url.searchParams.get("voice") || "Puck";
+  const voiceName = VALID_VOICES.includes(voiceParam) ? voiceParam : "Puck";
   const instruction = mode === "word_pitch" && word
     ? buildWordPitchInstruction(word)
     : FREE_TALK_INSTRUCTION;
-  console.log(`[ws] Mode: ${mode}${word ? `, Word: ${word}` : ""}`);
+  console.log(`[ws] Mode: ${mode}, Voice: ${voiceName}${word ? `, Word: ${word}` : ""}`);
 
   try {
     session = await ai.live.connect({
@@ -75,7 +78,7 @@ wss.on("connection", async (clientWs, req) => {
         systemInstruction: instruction,
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Aoede" },
+            prebuiltVoiceConfig: { voiceName },
           },
         },
       },
