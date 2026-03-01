@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",

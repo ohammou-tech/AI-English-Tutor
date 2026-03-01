@@ -3,6 +3,11 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { WebSocketServer, WebSocket } from "ws";
 import express from "express";
 import { createServer } from "http";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
@@ -50,7 +55,11 @@ Start by saying: "Your word is ${word}! Tell me, what does this word mean to you
 }
 
 const app = express();
-app.use(express.static("public"));
+app.use(express.static(join(__dirname, "public")));
+
+app.get("*", (_req, res) => {
+  res.sendFile(join(__dirname, "public", "index.html"));
+});
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
